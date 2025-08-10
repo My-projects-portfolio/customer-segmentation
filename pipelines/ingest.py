@@ -1,6 +1,7 @@
 import argparse
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 
 def parse_args():
@@ -18,9 +19,13 @@ def main():
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Read
-    df = pd.read_csv(raw_path) if raw_path.suffix == ".csv" else pd.read_excel(
-    raw_path,
-    dtype={"InvoiceNo": str, "StockCode": str}  # ensure string types on read
+    df = (
+        pd.read_csv(raw_path)
+        if raw_path.suffix == ".csv"
+        else pd.read_excel(
+            raw_path,
+            dtype={"InvoiceNo": str, "StockCode": str},  # ensure string types on read
+        )
     )
 
     # Basic cleaning

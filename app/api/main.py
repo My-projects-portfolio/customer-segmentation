@@ -1,7 +1,8 @@
+from pathlib import Path
+
+import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel
-from pathlib import Path
-import numpy as np
 
 app = FastAPI(title="Customer Segmentation API")
 

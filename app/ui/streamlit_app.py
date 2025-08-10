@@ -1,6 +1,7 @@
-import streamlit as st
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(page_title="Customer Segmentation", layout="wide")
 
@@ -18,6 +19,7 @@ else:
     meta_path = Path("artifacts/models/meta.json")
     if meta_path.exists():
         import json
+
         meta = json.loads(meta_path.read_text())
         st.write("**Model Info:**", meta)
 

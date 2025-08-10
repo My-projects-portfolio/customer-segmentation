@@ -38,7 +38,9 @@ def main():
     sil = silhouette_score(Xs, labels) if len(np.unique(labels)) > 1 else 0.0
 
     Path("artifacts/reports").mkdir(parents=True, exist_ok=True)
-    Path("artifacts/reports/metrics.json").write_text(json.dumps({"silhouette": sil}, indent=2))
+    Path("artifacts/reports/metrics.json").write_text(
+        json.dumps({"silhouette": sil}, indent=2)
+    )
     print(f"Evaluation silhouette={sil:.4f}")
 
 

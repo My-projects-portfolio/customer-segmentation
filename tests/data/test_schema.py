@@ -2,6 +2,7 @@ import pandas as pd
 import pandera as pa
 from pandera.typing import Series
 
+
 class TxnSchema(pa.SchemaModel):
     InvoiceNo: Series[str]
     InvoiceDate: Series[object]

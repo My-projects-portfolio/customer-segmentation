@@ -32,7 +32,11 @@ def main():
 
     df = pd.read_parquet(args.rfm_path)
     if args.sample:
-        df = df.sample(frac=args.sample, random_state=params["random_state"]) if len(df) > 1000 else df
+        df = (
+            df.sample(frac=args.sample, random_state=params["random_state"])
+            if len(df) > 1000
+            else df
+        )
 
     X = df[["Recency", "Frequency", "Monetary"]].copy()
     scaler = StandardScaler()
@@ -55,7 +59,12 @@ def main():
 
         # Persist minimal artifacts
         model_path = export_dir / "kmeans_model.npz"
-        np.savez(model_path, centers_=kmeans.cluster_centers_, scale_mean_=scaler.mean_, scale_scale_=scaler.scale_)
+        np.savez(
+            model_path,
+            centers_=kmeans.cluster_centers_,
+            scale_mean_=scaler.mean_,
+            scale_scale_=scaler.scale_,
+        )
 
         meta = {"silhouette": sil, "k": k}
         (export_dir / "meta.json").write_text(json.dumps(meta, indent=2))
@@ -70,11 +79,15 @@ def main():
                 drop = prev.get("silhouette", 0) - sil
                 max_drop = load_params()["silhouette_gate_drop"]
                 if drop > max_drop:
-                    raise SystemExit(f"CI Gate failed: silhouette drop {drop:.4f} > {max_drop}")
+                    raise SystemExit(
+                        f"CI Gate failed: silhouette drop {drop:.4f} > {max_drop}"
+                    )
 
         # write current metrics for next runs
         Path("artifacts/reports").mkdir(parents=True, exist_ok=True)
-        Path("artifacts/reports/metrics.json").write_text(json.dumps({"silhouette": sil}, indent=2))
+        Path("artifacts/reports/metrics.json").write_text(
+            json.dumps({"silhouette": sil}, indent=2)
+        )
 
 
 if __name__ == "__main__":
