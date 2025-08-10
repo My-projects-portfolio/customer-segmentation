@@ -7,8 +7,10 @@ on:
     branches: ["main"]
 
 jobs:
-  test-build:
+  build-test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
 
     steps:
       - name: Checkout
@@ -18,12 +20,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install deps
         run: |
           python -m pip install -U pip
           pip install -r requirements.txt
-          pip install pyarrow openpyxl
+          # Extra deps needed for CI/tests/parquet/api
+          pip install pyarrow openpyxl fastapi uvicorn
+          # Ensure linters/test tools exist even if not in requirements
+          pip install black isort flake8 mypy pytest
+
+      - name: Prepare tiny sample data
+        run: |
+          python -c "import pandas as pd, pathlib; p=pathlib.Path('data/interim'); p.mkdir(parents=True, exist_ok=True); df=pd.DataFrame({'InvoiceNo':['0001','0002','0003'],'InvoiceDate':pd.to_datetime(['2021-01-01','2021-01-02','2021-01-03']),'CustomerID':[123.0,456.0,789.0],'Quantity':[1,2,3],'UnitPrice':[10.0,20.0,30.0]}); df['TotalPrice']=df['Quantity']*df['UnitPrice']; df.to_parquet('data/interim/transactions.parquet', index=False)"
 
       - name: Lint & unit tests
         run: |
@@ -33,15 +43,33 @@ jobs:
           mypy pipelines app || true
           pytest -q
 
-      - name: Prepare tiny sample data
+      - name: Build features
         run: |
-          python -c "import pandas as pd, pathlib; p=pathlib.Path('data/interim'); p.mkdir(parents=True, exist_ok=True); df=pd.DataFrame({'InvoiceNo':['0001','0002','0003'],'InvoiceDate':pd.to_datetime(['2021-01-01','2021-01-02','2021-01-03']), 'CustomerID':[123.0,456.0,789.0],'Quantity':[1,2,3],'UnitPrice':[10.0,20.0,30.0]}); df['TotalPrice']=df['Quantity']*df['UnitPrice']; df.to_parquet('data/interim/transactions.parquet', index=False)"
           python pipelines/features.py --in_path data/interim/transactions.parquet --out_path data/processed/rfm.parquet
 
       - name: Smoke-train (CI gate)
         run: |
           python pipelines/train.py --rfm_path data/processed/rfm.parquet --export_path artifacts/models --sample 1.0 --ci_gate True
 
+      - name: Evaluate
+        run: |
+          python pipelines/evaluate.py --rfm_path data/processed/rfm.parquet --model_dir artifacts/models
+
       - name: Build Docker image (main only)
         if: github.ref == 'refs/heads/main'
-        run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
+
+      # Optional: push the image to GHCR (uncomment to enable)
+      # - name: Log in to GHCR
+      #   if: github.ref == 'refs/heads/main'
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      #
+      # - name: Push image
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
