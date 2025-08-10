@@ -1,0 +1,4 @@
+k: 4
+random_state: 42
+sample_frac: 0.10   # default sample for quick local runs
+silhouette_gate_drop: 0.05  # max allowed drop vs last model in CI

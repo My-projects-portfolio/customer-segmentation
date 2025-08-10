@@ -1,0 +1,33 @@
+stages:
+  ingest:
+    cmd: python pipelines/ingest.py --raw_path data/raw/online_retail.csv --out_path data/interim/transactions.parquet
+    deps:
+      - pipelines/ingest.py
+      - data/raw/online_retail.csv
+    outs:
+      - data/interim/transactions.parquet
+
+  features:
+    cmd: python pipelines/features.py --in_path data/interim/transactions.parquet --out_path data/processed/rfm.parquet
+    deps:
+      - pipelines/features.py
+      - data/interim/transactions.parquet
+    outs:
+      - data/processed/rfm.parquet
+
+  train:
+    cmd: python pipelines/train.py --rfm_path data/processed/rfm.parquet --export_path artifacts/models
+    deps:
+      - pipelines/train.py
+      - data/processed/rfm.parquet
+    outs:
+      - artifacts/models
+
+  evaluate:
+    cmd: python pipelines/evaluate.py --rfm_path data/processed/rfm.parquet --model_dir artifacts/models
+    deps:
+      - pipelines/evaluate.py
+      - artifacts/models
+      - data/processed/rfm.parquet
+    outs:
+      - artifacts/reports/metrics.json

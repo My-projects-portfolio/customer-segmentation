@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+mlruns/
+artifacts/models/*.pkl
+*.parquet
+.env
+.DS_Store
+.data/
+.cache/
