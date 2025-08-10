@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 
-def test_transactions_schema_basic():
+def test_transactions_schema_basic() -> None:
     p = Path("data/interim/transactions.parquet")
     assert (
         p.exists()
@@ -18,10 +18,7 @@ def test_transactions_schema_basic():
         "UnitPrice",
         "TotalPrice",
     ]
-    new_func(df, required)
 
-
-def new_func(df, required):
     for col in required:
         assert col in df.columns, f"Missing column: {col}"
 
