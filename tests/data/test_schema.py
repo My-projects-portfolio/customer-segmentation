@@ -1,23 +1,15 @@
+from pathlib import Path
 import pandas as pd
-import pandera as pa
-from pandera.typing import Series
 
+def test_transactions_schema_basic():
+    p = Path("data/interim/transactions.parquet")
+    assert p.exists(), "transactions.parquet not found (CI sample step should have created it)"
 
-class TxnSchema(pa.SchemaModel):
-    InvoiceNo: Series[str]
-    InvoiceDate: Series[object]
-    CustomerID: Series[float]
-    Quantity: Series[float]
-    UnitPrice: Series[float]
+    df = pd.read_parquet(p)
+    required = ["InvoiceNo", "InvoiceDate", "CustomerID", "Quantity", "UnitPrice", "TotalPrice"]
+    for col in required:
+        assert col in df.columns, f"Missing column: {col}"
 
-    class Config:
-        strict = False
-
-
-def test_schema_sample():
-    # Load tiny sample if available
-    try:
-        df = pd.read_parquet("data/interim/transactions.parquet").head(100)
-    except Exception:
-        return  # skip if not generated yet
-    TxnSchema.validate(df, lazy=True)
+    # basic value checks used in our pipeline
+    assert (df["Quantity"] > 0).all(), "Quantity must be > 0"
+    assert (df["UnitPrice"] >= 0).all(), "UnitPrice must be >= 0"
