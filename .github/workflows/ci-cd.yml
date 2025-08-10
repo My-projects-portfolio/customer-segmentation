@@ -46,10 +46,12 @@ jobs:
       - name: Build features
         run: |
           python pipelines/features.py --in_path data/interim/transactions.parquet --out_path data/processed/rfm.parquet
-
+      
       - name: Smoke-train (CI gate)
         run: |
           python pipelines/train.py --rfm_path data/processed/rfm.parquet --export_path artifacts/models --sample 1.0 --ci_gate True
+      - name: Integration tests (API, after training)
+        run: pytest -q tests/integration/test_api.py
 
       - name: Evaluate
         run: |
