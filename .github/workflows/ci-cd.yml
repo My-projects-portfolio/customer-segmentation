@@ -1,0 +1,56 @@
+name: ci-cd
+
+on:
+  push: { branches: ["main"] }
+  pull_request: { branches: ["main"] }
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          # for parquet + excel
+          pip install pyarrow openpyxl
+
+      - name: Lint & tests
+        run: |
+          black --check .
+          isort --check-only .
+          flake8 .
+          mypy pipelines app || true
+          pytest -q
+
+      - name: Data schema check (tiny synthetic)
+        run: |
+          mkdir -p data/interim
+          python - <<'PY'
+import pandas as pd
+from pathlib import Path
+Path('data/interim').mkdir(parents=True, exist_ok=True)
+df = pd.DataFrame({
+  'InvoiceNo': ['0001','0002','0003'],
+  'InvoiceDate': pd.to_datetime(['2021-01-01','2021-01-02','2021-01-03']),
+  'CustomerID': [123.0, 456.0, 789.0],
+  'Quantity': [1,2,3],
+  'UnitPrice': [10.0, 20.0, 30.0],
+  'TotalPrice': [10.0, 40.0, 90.0],
+})
+df.to_parquet('data/interim/transactions.parquet', index=False)
+PY
+          pytest tests/data/test_schema.py -q
+
+      - name: Smoke-train (CI gate)
+        run: |
+          python pipelines/features.py --in_path data/interim/transactions.parquet --out_path data/processed/rfm.parquet
+          python pipelines/train.py --rfm_path data/processed/rfm.parquet --export_path artifacts/models --sample 1.0 --ci_gate True
+
+      - name: Build Docker image (main only)
+        if: github.ref == 'refs/heads/main'
+        run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
